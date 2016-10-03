@@ -16,14 +16,19 @@ var testSignal = os.Getenv("TEST_SIGNAL") == "1"
 func TestCloser(t *testing.T) {
 	var vals []int
 	fn := closer.Defer(func() { vals = append(vals, 1) }, func() { vals = append(vals, 0) })
-	fn()
-	fn()
-	if len(vals) != 2 {
-		t.Fatalf("expected 2 values, got %d", len(vals))
-	}
-	if vals[0] != 0 && vals[1] != 1 {
-		t.Fatalf("unexpected output: %v", vals)
-	}
+
+	defer func() {
+		if len(vals) != 2 {
+			t.Fatalf("expected 2 values, got %d", len(vals))
+		}
+		if vals[0] != 0 && vals[1] != 1 {
+			t.Fatalf("unexpected output: %v", vals)
+		}
+	}()
+
+	defer fn()
+	defer fn()
+
 }
 
 func TestSignal(t *testing.T) {
@@ -41,6 +46,7 @@ func TestSignal(t *testing.T) {
 		time.Sleep(time.Millisecond * 10)
 		cmd.Process.Signal(syscall.SIGTERM)
 	}()
+
 	if err := cmd.Wait(); err != nil {
 		if !strings.Contains(err.Error(), "55") {
 			t.Fatalf("unexpected exit code: %v", err)
